@@ -43,6 +43,10 @@
   <div class="container contact-grid">
 
     <form class="form-card" id="enquiry-form">
+      <input type="hidden" name="access_key" value="8fb7685f-c97f-4fce-bfef-1bb2603a4304">
+      <input type="hidden" name="subject" value="New enquiry from the Recomworks website">
+      <input type="hidden" name="from_name" value="Recomworks website">
+      <input type="checkbox" name="botcheck" style="display:none" tabindex="-1" autocomplete="off">
       <div class="field-row">
         <div class="field">
           <label for="f-name">Full name</label>
@@ -78,7 +82,7 @@
         <textarea id="f-message" name="message" rows="5" placeholder="Site(s), rough timeline, what's moving..."></textarea>
       </div>
       <button class="btn-primary" type="submit" style="margin-top:6px;">Send enquiry</button>
-      <p class="form-note" id="form-note" hidden>Opening your email app to send this to hello@recomworks.co.uk — if nothing opens, email us directly instead.</p>
+      <p class="form-note" id="form-note" hidden></p>
     </form>
 
     <div class="sidebar">
@@ -170,30 +174,39 @@
   document.getElementById('enquiry-form').addEventListener('submit', function (e) {
     e.preventDefault();
     var f = e.target;
-    var name = f.name.value.trim();
-    var email = f.email.value.trim();
-    var phone = f.phone.value.trim();
-    var company = f.company.value.trim();
-    var service = f.service.value;
-    var message = f.message.value.trim();
+    var note = document.getElementById('form-note');
+    var btn = f.querySelector('button[type="submit"]');
+    var originalBtnText = btn.textContent;
 
-    var subject = 'Enquiry from ' + (company || name || 'website visitor') + ' — ' + service;
-    var bodyLines = [
-      'Name: ' + name,
-      'Email: ' + email,
-      'Phone: ' + (phone || '(not given)'),
-      'Company: ' + (company || '(not given)'),
-      'Service: ' + service,
-      '',
-      message
-    ];
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    note.hidden = true;
 
-    var mailto = 'mailto:hello@recomworks.co.uk'
-      + '?subject=' + encodeURIComponent(subject)
-      + '&body=' + encodeURIComponent(bodyLines.join('\n'));
-
-    document.getElementById('form-note').hidden = false;
-    window.location.href = mailto;
+    fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Accept': 'application/json' },
+      body: new FormData(f)
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.success) {
+          note.textContent = "Thanks — your enquiry's been sent. We'll be in touch shortly.";
+          note.className = 'form-note success';
+          note.hidden = false;
+          f.reset();
+        } else {
+          throw new Error(data.message || 'Submission failed');
+        }
+      })
+      .catch(function () {
+        note.textContent = "Something went wrong sending that — please email us directly at hello@recomworks.co.uk or call 07446 982 465.";
+        note.className = 'form-note error';
+        note.hidden = false;
+      })
+      .finally(function () {
+        btn.disabled = false;
+        btn.textContent = originalBtnText;
+      });
   });
 </script>
 
